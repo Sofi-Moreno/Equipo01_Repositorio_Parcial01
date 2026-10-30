@@ -2,17 +2,7 @@
 
 const { iniciarPregunta, continuarPregunta, consultarYResponder, prepararConsulta } = require('./flujo.js');
 const { CATALOGO } = require('./catalogo.js');
-
-// Fuentes revisadas junto con los siete bloques del DQL de P1, nunca derivadas del usuario.
-const DIMENSIONES = Object.freeze({
-  ingreso_neto_mensual: [['DimTiempo', 'AnioMes'], ['DimTiempo', 'FechaCompleta']],
-  ranking_margen_categorias: [['DimTiempo', 'FechaCompleta'], ['DimProducto', 'Categoria']],
-  ranking_ticket_sucursales: [['DimTiempo', 'FechaCompleta'], ['DimSucursal', 'NombreSucursal']],
-  mayor_caida_segmento: [['DimTiempo', 'FechaCompleta'], ['DimCliente', 'Segmento']],
-  ranking_valor_canales: [['DimTiempo', 'FechaCompleta'], ['DimCanal', 'TipoCanal']],
-  comparacion_margen_canales: [['DimTiempo', 'AnioMes'], ['DimCanal', 'TipoCanal']],
-  lider_producto_categoria: [['DimTiempo', 'FechaCompleta'], ['DimProducto', 'Categoria'], ['DimProducto', 'NombreProducto']],
-});
+const { fuentesDe } = require('./fuentes.js');
 
 function idValido(id) {
   return Number.isSafeInteger(id) && id > 0;
@@ -104,11 +94,7 @@ async function prepararRegistro(clienteP2, preguntaId, sesionId) {
     );
     const consultaId = rows[0].ca_id;
     const entrada = CATALOGO.find((c) => c.id === preparada.consulta_id);
-    const fuentes = [
-      ...entrada.camposFactVentas.map((atributo) => ['FactVentas', atributo]),
-      ...DIMENSIONES[entrada.id],
-    ];
-    for (const [tabla, atributo] of fuentes) {
+    for (const [tabla, atributo] of fuentesDe(entrada)) {
       await clienteP2.query(
         'INSERT INTO fuentes_datos (ca_id, fd_nombre_tabla, fd_atributo) VALUES ($1, $2, $3)',
         [consultaId, tabla, atributo],

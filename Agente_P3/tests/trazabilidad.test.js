@@ -94,8 +94,8 @@ test('pregunta y aclaración quedan en P2; solo una consulta autorizada accede a
   assert.equal(aclarada.solicitud.estado, 'interpretada');
   const salida = await consultarPreguntaTrazada(inicial.pregunta_id, ctx);
   assert.equal(consultasP1, 1);
-  assert.equal(salida.respuesta_ejecutiva,
-    'Período: 2025-10-01 a 2025-10-31. Ingreso neto por mes: 2025-10: 5580.00.');
+  assert.match(salida.respuesta_ejecutiva,
+    /^Período: 2025-10-01 a 2025-10-31\. Ingreso neto por mes: 2025-10: 5580\.00\./);
   const db = clienteP2.estado;
   assert.deepEqual(JSON.parse(db.preguntas[0].pre_filtro).aclaraciones,
     [{ pregunta: '¿Qué período desea analizar?', respuesta: 'octubre de 2025' }]);
@@ -106,10 +106,15 @@ test('pregunta y aclaración quedan en P2; solo una consulta autorizada accede a
     [1, 'FactVentas', 'MontoVenta'], [1, 'FactVentas', 'MontoDescuento'],
     [1, 'DimTiempo', 'AnioMes'], [1, 'DimTiempo', 'FechaCompleta'],
   ]);
+  for (const [, tabla, atributo] of db.fuentes) {
+    assert.ok(salida.respuesta_ejecutiva.includes(`${tabla}.${atributo}`));
+  }
   assert.deepEqual(db.reglas.map((r) => [r[1], r[2]]),
     [['consulta_autorizada', 'aprobada'], ['consulta_p1', 'aprobada']]);
   assert.deepEqual(JSON.parse(db.resultados[0].datos), [{ mes: '2025-10', ingreso_neto: '5580.00' }]);
   assert.equal(JSON.parse(db.resultados[0].metadatos).cantidad_filas, 1);
+  assert.equal(JSON.parse(db.resultados[0].metadatos).regla_calculo,
+    'SUM(MontoVenta - MontoDescuento)');
   assert.equal(db.respuestas[0].explicacion, salida.respuesta_ejecutiva);
   assert.deepEqual([salida.pregunta_id, salida.consulta_id_p2, salida.resultado_id, salida.respuesta_id],
     [1, 1, 1, 1]);

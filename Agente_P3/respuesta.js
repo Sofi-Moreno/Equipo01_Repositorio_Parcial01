@@ -1,8 +1,19 @@
 'use strict';
 
 const { CATALOGO } = require('./catalogo.js');
+const { fuentesDe } = require('./fuentes.js');
 
-const esquemas = new Map(CATALOGO.map(({ id, columnasResultado }) => [id, columnasResultado]));
+const entradas = new Map(CATALOGO.map((entrada) => [entrada.id, entrada]));
+
+const ADVERTENCIA_SCD2 = 'Advertencia: los segmentos son históricos (SCD2); una caída puede reflejar migración de clientes entre segmentos y no necesariamente menor compra de los mismos clientes.';
+
+function evidenciaDe(entrada, resultado) {
+  const filtros = [];
+  if (resultado.filtros?.categoria) filtros.push(`categoría: ${resultado.filtros.categoria}`);
+  if (resultado.filtros?.canales) filtros.push(`canales: ${resultado.filtros.canales.join(' y ')}`);
+  return `Consulta autorizada: ${entrada.id}. Regla de cálculo: ${entrada.reglaCalculo}. Fuentes: ${fuentesDe(entrada)
+    .map(([tabla, atributo]) => `${tabla}.${atributo}`).join(', ')}.${filtros.length ? ` Filtros: ${filtros.join('; ')}.` : ''}`;
+}
 
 function periodoDe({ periodo, filas }) {
   if (periodo?.tipo === 'rango_fechas') {
@@ -46,24 +57,26 @@ function porcentaje(valor) {
 }
 
 function redactarRespuesta(resultado) {
-  const columnas = esquemas.get(resultado?.consulta_id);
-  if (!columnas || !Array.isArray(resultado.filas)
+  const entrada = entradas.get(resultado?.consulta_id);
+  if (!entrada || !Array.isArray(resultado.filas)
       || resultado.sin_registros !== (resultado.filas.length === 0)) {
     throw new Error('El resultado no corresponde a una consulta válida.');
   }
   for (const fila of resultado.filas) {
     if (fila === null || typeof fila !== 'object'
-        || columnas.some((columna) => fila[columna] === null || fila[columna] === undefined)) {
+        || entrada.columnasResultado.some((columna) => fila[columna] === null || fila[columna] === undefined)) {
       throw new Error('El resultado no contiene las columnas esperadas.');
     }
   }
 
   const contexto = periodoDe(resultado);
+  const evidencia = evidenciaDe(entrada, resultado);
+  const advertencia = entrada.id === 'mayor_caida_segmento' ? ` ${ADVERTENCIA_SCD2}` : '';
   if (resultado.sin_registros) {
     const detalle = resultado.consulta_id === 'mayor_caida_segmento'
       ? 'No se encontraron segmentos con una caída comparable; esto no implica ventas iguales a cero.'
       : 'No se encontraron registros para los criterios consultados; esto no implica un valor igual a cero.';
-    return `${contexto} ${detalle}`;
+    return `${contexto} ${detalle} ${evidencia}${advertencia}`;
   }
 
   const filas = resultado.filas;
@@ -96,7 +109,7 @@ function redactarRespuesta(resultado) {
     default:
       throw new Error('No existe una respuesta para esta consulta.');
   }
-  return `${contexto} ${resumen}`;
+  return `${contexto} ${resumen} ${evidencia}${advertencia}`;
 }
 
 module.exports = { redactarRespuesta };

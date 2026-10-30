@@ -4,13 +4,15 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { redactarRespuesta } = require('../respuesta.js');
 const { iniciarPregunta, continuarPregunta, consultarYResponder } = require('../flujo.js');
+const { CATALOGO } = require('../catalogo.js');
+const { fuentesDe } = require('../fuentes.js');
 
 const octubre = { tipo: 'rango_fechas', desde: '2025-10-01', hasta: '2025-10-31' };
 const resultado = (consulta_id, filas, periodo = octubre, filtros = {}) => ({
   consulta_id, filas, periodo, filtros, sin_registros: filas.length === 0,
 });
 
-test('las siete respuestas usan únicamente las filas y el período del resultado', () => {
+test('las cinco respuestas con rango usan las filas y muestran la evidencia de la plantilla', () => {
   const casos = [
     [resultado('ingreso_neto_mensual', [
       { mes: '2025-10', ingreso_neto: '5580.00' },
@@ -34,6 +36,12 @@ test('las siete respuestas usan únicamente las filas y el período del resultad
     const texto = redactarRespuesta(datos);
     assert.match(texto, /^Período: 2025-10-01 a 2025-10-31\./);
     assert.match(texto, esperado);
+    const entrada = CATALOGO.find((item) => item.id === datos.consulta_id);
+    assert.match(texto, new RegExp(`Consulta autorizada: ${entrada.id}\\.`));
+    assert.ok(texto.includes(`Regla de cálculo: ${entrada.reglaCalculo}.`));
+    for (const [tabla, atributo] of fuentesDe(entrada)) {
+      assert.ok(texto.includes(`${tabla}.${atributo}`));
+    }
   }
 });
 
@@ -49,6 +57,9 @@ test('la mayor caída preserva ambos períodos y todos los segmentos empatados',
   assert.match(texto, /^Períodos: 2025-10-01 a 2025-10-31 frente a 2025-11-01 a 2025-11-30\./);
   assert.match(texto, /Empate en la mayor caída/);
   assert.match(texto, /Regular: 20 a 10 unidades \(50 %\); VIP: 8 a 4 unidades \(50 %\)/);
+  assert.match(texto, /FactVentas\.CantidadVendida, DimTiempo\.FechaCompleta, DimCliente\.Segmento/);
+  assert.ok(texto.includes(`Regla de cálculo: ${CATALOGO.find((c) => c.id === 'mayor_caida_segmento').reglaCalculo}.`));
+  assert.match(texto, /históricos \(SCD2\).*migración de clientes entre segmentos/);
 });
 
 test('últimos meses muestran solo las combinaciones con ventas sin inventar ceros', () => {
@@ -58,21 +69,27 @@ test('últimos meses muestran solo las combinaciones con ventas sin inventar cer
   ], { tipo: 'ultimos_meses_disponibles', cantidad: 3 }, { canales: ['Tienda Física', 'E-commerce'] }));
   assert.match(texto, /Meses con resultados: 2026-08, 2026-10/);
   assert.match(texto, /2026-08, Tienda Física: 300\.00; 2026-10, E-commerce: 440\.00/);
+  assert.match(texto, /Filtros: canales: Tienda Física y E-commerce/);
+  assert.match(texto, /Regla de cálculo: SUM\(MontoVenta - MontoDescuento - CostoTotal\)/);
+  assert.match(texto, /Fuentes: FactVentas\.MontoVenta, FactVentas\.MontoDescuento, FactVentas\.CostoTotal, DimTiempo\.AnioMes, DimCanal\.TipoCanal/);
   assert.doesNotMatch(texto, /2026-09|2026-08, E-commerce|2026-10, Tienda Física/);
 });
 
 test('sin filas comunica ausencia de registros, no ventas cero ni meses imaginados', () => {
   const vacio = redactarRespuesta(resultado('ranking_margen_categorias', [], octubre));
   assert.match(vacio, /No se encontraron registros/);
+  assert.match(vacio, /Regla de cálculo: SUM\(MontoVenta - MontoDescuento - CostoTotal\)/);
   assert.doesNotMatch(vacio, /margen bruto: 0/);
   const sinMeses = redactarRespuesta(resultado('comparacion_margen_canales', [],
     { tipo: 'ultimos_meses_disponibles', cantidad: 3 }));
   assert.doesNotMatch(sinMeses, /Meses con resultados:/);
-  assert.match(redactarRespuesta(resultado('mayor_caida_segmento', [],
+  const sinCaida = redactarRespuesta(resultado('mayor_caida_segmento', [],
     { tipo: 'comparacion_periodos', periodos: [
       { rol: 'anterior', ...octubre },
       { rol: 'actual', tipo: 'rango_fechas', desde: '2025-11-01', hasta: '2025-11-30' },
-    ] })), /No se encontraron segmentos con una caída comparable/);
+    ] }));
+  assert.match(sinCaida, /No se encontraron segmentos con una caída comparable/);
+  assert.match(sinCaida, /migración de clientes entre segmentos/);
 });
 
 test('no redacta consultas desconocidas, filas incompletas ni cifras inválidas', () => {
@@ -85,6 +102,16 @@ test('no redacta consultas desconocidas, filas incompletas ni cifras inválidas'
   assert.throws(() => redactarRespuesta(resultado('lider_producto_categoria', [
     { producto: 'Laptop Pro 15', unidades_vendidas: '2.00' },
   ])), /Falta la categoría/);
+});
+
+test('la explicación agrega evidencia sin alterar los datos estructurados', () => {
+  const datos = resultado('lider_producto_categoria', [
+    { producto: 'Laptop Pro 15', unidades_vendidas: '2.00' },
+  ], octubre, { categoria: 'electronica' });
+  const copia = structuredClone(datos);
+  const texto = redactarRespuesta(datos);
+  assert.match(texto, /Filtros: categoría: electronica/);
+  assert.deepEqual(datos, copia);
 });
 
 test('el recorrido pregunta → aclaración → respuesta rechaza consultas incompletas', async () => {
@@ -103,6 +130,12 @@ test('el recorrido pregunta → aclaración → respuesta rechaza consultas inco
   const salida = await consultarYResponder(aclarada, cliente);
   assert.equal(llamadas, 1);
   assert.deepEqual(salida.filas, [{ mes: '2025-10', ingreso_neto: '5580.00' }]);
-  assert.equal(salida.respuesta_ejecutiva,
-    'Período: 2025-10-01 a 2025-10-31. Ingreso neto por mes: 2025-10: 5580.00.');
+  assert.match(salida.respuesta_ejecutiva,
+    /^Período: 2025-10-01 a 2025-10-31\. Ingreso neto por mes: 2025-10: 5580\.00\./);
+  assert.match(salida.respuesta_ejecutiva, /Fuentes: FactVentas\.MontoVenta, FactVentas\.MontoDescuento, DimTiempo\.AnioMes, DimTiempo\.FechaCompleta/);
+  assert.equal(salida.regla_calculo, 'SUM(MontoVenta - MontoDescuento)');
+  assert.deepEqual(salida.campos_fact_ventas, ['MontoVenta', 'MontoDescuento']);
+  assert.deepEqual(salida.periodo, octubre);
+  assert.deepEqual(salida.filtros, {});
+  assert.equal(salida.sin_registros, false);
 });

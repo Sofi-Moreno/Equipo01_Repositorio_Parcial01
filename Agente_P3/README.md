@@ -1,6 +1,6 @@
 # Agente de consultas del Data Mart (P3)
 
-Este módulo interpreta las siete preguntas obligatorias, pide los datos que falten, selecciona **únicamente** consultas SQL parametrizadas del Data Mart de P1 y resume sus resultados. No genera SQL a partir del texto del usuario. Incluye un adaptador local de trazabilidad para el DDL de P2, **aún no probado en una base P2 real**. Las preguntas adicionales de P4 no están implementadas aquí.
+Este módulo interpreta las siete preguntas obligatorias, pide los datos que falten, selecciona **únicamente** consultas SQL parametrizadas del Data Mart de P1 y resume sus resultados con regla de cálculo, fuentes y advertencia SCD2 cuando corresponde. No genera SQL a partir del texto del usuario. Incluye un adaptador local de trazabilidad para el DDL de P2, **aún no probado en una base P2 real**. Las preguntas adicionales de P4 no están implementadas aquí.
 
 ## Primer recorrido
 
