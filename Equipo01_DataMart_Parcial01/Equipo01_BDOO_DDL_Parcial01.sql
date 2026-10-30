@@ -1,3 +1,10 @@
+CREATE TABLE agentes_analiticos (
+    aa_id SERIAL PRIMARY KEY,
+    aa_nombre TEXT NOT NULL,
+    aa_plataforma TEXT,
+    aa_modelo TEXT
+);
+
 CREATE TABLE usuarios (
     u_id SERIAL PRIMARY KEY,
     nombre TEXT NOT NULL
@@ -6,7 +13,8 @@ CREATE TABLE usuarios (
 CREATE TABLE sesiones (
     ses_id SERIAL PRIMARY KEY,
     ses_fech TIMESTAMP DEFAULT NOW(),
-    u_id INT REFERENCES usuarios(u_id)
+    u_id INT REFERENCES usuarios(u_id),
+    aa_id INT REFERENCES agentes_analiticos(aa_id)
 );
 
 CREATE TABLE intenciones (
@@ -40,12 +48,28 @@ CREATE TABLE fuentes_datos (
 );
 
 CREATE TABLE reglas_validaciones (
-    rv_id SERIAL PRIMARY KEY,
+    rv_id SERIAL,
     ca_id INT REFERENCES consultas_analiticas(ca_id),
-    rv_nombre TEXT,
+    rv_nombre TEXT NOT NULL,
     rv_estado TEXT,
-    rv_mensaje TEXT
+    rv_mensaje TEXT,
+    PRIMARY KEY (rv_id)
 );
+
+CREATE TABLE reglas_seguridad (
+    rv_nivel_acceso TEXT NOT NULL, 
+    rv_rol_requerido TEXT          
+) INHERITS (reglas_validaciones);
+
+CREATE TABLE reglas_sintaxis (
+    rv_dialecto_sql TEXT NOT NULL, 
+    rv_max_joins INT               
+) INHERITS (reglas_validaciones);
+
+CREATE TABLE reglas_repuesta (
+    rv_palabras_restringidas TEXT, 
+    rv_tono_requerido TEXT         
+) INHERITS (reglas_validaciones);
 
 CREATE TABLE resultados_consultas (
     rc_id SERIAL PRIMARY KEY,
