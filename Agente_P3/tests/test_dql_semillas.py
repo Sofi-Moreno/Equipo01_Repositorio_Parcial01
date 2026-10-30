@@ -6,10 +6,10 @@ import unittest
 from pathlib import Path
 
 
-CARPETA = Path(__file__).resolve().parents[1] / "Equipo01_DataMart_Parcial01"
+CARPETA = Path(__file__).resolve().parents[2] / "Equipo01_DataMart_Parcial01"
 DDL = (CARPETA / "Equipo01_DataMart_DDL_Parcial01.sql").read_text(encoding="utf-8")
 DML = (CARPETA / "Equipo01_DataMart_DML_Parcial01.sql").read_text(encoding="utf-8")
-INCREMENTAL = (CARPETA / "Equipo01_DataMart_DML_P3_Incremental.sql").read_text(encoding="utf-8")
+INCREMENTAL = (Path(__file__).resolve().parents[1] / "Equipo01_DataMart_DML_P3_Incremental.sql").read_text(encoding="utf-8")
 DQL = (CARPETA / "Equipo01_DataMart_DQL_Parcial01.sql").read_text(encoding="utf-8")
 
 

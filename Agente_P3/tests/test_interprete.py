@@ -4,7 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
-from interprete import interpretar
+from Agente_P3.interprete import interpretar
 
 
 CASOS = json.loads(

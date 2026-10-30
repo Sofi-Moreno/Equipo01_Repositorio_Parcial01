@@ -2,7 +2,7 @@
 
 import unittest
 
-from interprete import continuar_aclaracion, interpretar
+from Agente_P3.interprete import continuar_aclaracion, interpretar
 
 
 class AclaracionesTest(unittest.TestCase):
