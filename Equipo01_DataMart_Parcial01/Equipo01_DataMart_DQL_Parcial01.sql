@@ -203,7 +203,8 @@ LIMIT 1;
 
 -- BEGIN QUERY mayor_caida_segmento
 -- $1/$2 anterior, $3/$4 actual; volumen = unidades vendidas (SCD2 historico).
--- Solo se comparan segmentos con ventas en ambos periodos; caida absoluta positiva.
+-- Solo segmentos con ventas en ambos periodos y base anterior positiva.
+-- Caida porcentual positiva; se devuelven todos los empatados en el primer puesto.
 WITH anterior AS (
     SELECT c.Segmento, SUM(f.CantidadVendida) AS unidades
     FROM FactVentas f
@@ -218,15 +219,21 @@ WITH anterior AS (
     JOIN DimCliente c ON c.Sk_Dim_Cliente = f.Sk_Dim_Cliente
     WHERE t.FechaCompleta BETWEEN $3::date AND $4::date
     GROUP BY c.Segmento
+), caidas AS (
+    SELECT a.Segmento AS segmento,
+           a.unidades AS valor_anterior, b.unidades AS valor_actual,
+           100.0 * (a.unidades - b.unidades) / NULLIF(a.unidades, 0) AS caida_porcentual
+    FROM anterior a
+    JOIN actual b ON b.Segmento = a.Segmento
+    WHERE a.unidades > 0 AND a.unidades > b.unidades
+), posiciones AS (
+    SELECT caidas.*, DENSE_RANK() OVER (ORDER BY caida_porcentual DESC) AS posicion
+    FROM caidas
 )
-SELECT a.Segmento AS segmento,
-       a.unidades AS valor_anterior, b.unidades AS valor_actual,
-       a.unidades - b.unidades AS variacion
-FROM anterior a
-JOIN actual b ON b.Segmento = a.Segmento
-WHERE a.unidades > b.unidades
-ORDER BY variacion DESC, a.Segmento
-LIMIT 1;
+SELECT segmento, valor_anterior, valor_actual, caida_porcentual
+FROM posiciones
+WHERE posicion = 1
+ORDER BY segmento;
 -- END QUERY mayor_caida_segmento
 
 -- BEGIN QUERY ranking_valor_canales
@@ -265,15 +272,15 @@ ORDER BY t.AnioMes, c.TipoCanal;
 
 -- BEGIN QUERY lider_producto_categoria
 -- $1 desde (DATE), $2 hasta (DATE), $3 categoria normalizada sin acentos.
--- Ventas por producto = ingreso neto, sin sumar promedios ni contar lineas como tickets.
+-- Producto lider = mayor cantidad de unidades vendidas en la categoria y periodo.
 SELECT p.NombreProducto AS producto,
-       SUM(f.MontoVenta - f.MontoDescuento) AS ventas_producto
+       SUM(f.CantidadVendida) AS unidades_vendidas
 FROM FactVentas f
 JOIN DimTiempo t ON t.Sk_Dim_Tiempo = f.Sk_Dim_Tiempo
 JOIN DimProducto p ON p.Sk_Dim_Producto = f.Sk_Dim_Producto
 WHERE t.FechaCompleta BETWEEN $1::date AND $2::date
   AND lower(translate(p.Categoria, 'ÁÉÍÓÚÜáéíóúü', 'AEIOUUaeiouu')) = $3
 GROUP BY p.Sk_Dim_Producto, p.NombreProducto
-ORDER BY ventas_producto DESC, p.NombreProducto
+ORDER BY unidades_vendidas DESC, p.NombreProducto
 LIMIT 1;
 -- END QUERY lider_producto_categoria
