@@ -2,6 +2,15 @@
 
 Este documento reúne criterios de negocio, cambios de diseño y límites de la implementación. Para explicar el funcionamiento de extremo a extremo sin mezclarlo con decisiones pendientes, leer [Cómo funciona el agente analítico](interprete.md).
 
+**Actualización de integración:** [Conexión y modelo](CONEXION_Y_MODELO.md) documenta
+la consola, Gemini, clases y migración actuales. El DDL ya contiene `agentes_analiticos`,
+`ca_validacion`, claves y restricciones 1:1. La persistencia y la migración se probaron
+con PostgreSQL embebido; Gemini completó una interpretación real. P2 ya conecta a Supabase
+por el pooler de transacciones 6543 con CA verificada y recibió la migración del diagrama.
+P1 también conecta con TLS verificado. La prueba remota completa respondió 5580,00 para
+octubre de 2025 y recuperó la cadena persistida desde otra conexión P2 (sesión 2, pregunta 2,
+consulta 1, resultado 1, respuesta 1). Evidencia: `evidencias/verificacion_remota.json`.
+
 ## Criterios aplicados a las siete preguntas
 
 | Pregunta | Criterio |
@@ -30,8 +39,8 @@ Los nombres de columnas se toman del esquema P1; por ejemplo, `DimProducto.Nombr
 | Área | Estado / decisión pendiente |
 | --- | --- |
 | P1 y respuestas | Las siete plantillas se probaron sobre la semilla en Supabase; el intérprete y las respuestas tienen pruebas locales. La respuesta usa la misma lista de fuentes por plantilla que el adaptador P2 e incluye la advertencia SCD2. Esto verifica consistencia de catálogo y pruebas locales, no demuestra una ejecución Node → PostgreSQL ni auditoría independiente de cada fila en P1. |
-| P2 | El DDL de P2 está en el repositorio; el adaptador local escribiría en esas tablas si existieran, pero no se han aplicado a Supabase ni se probó contra PostgreSQL P2 real. El informe muestra `Agente_Analitico` y `ca_validacion`, ausentes del DDL; además dibuja relaciones 1:1 no garantizadas por sus FK opcionales y sin `UNIQUE`. Confirmar con P2 qué versión es el contrato definitivo antes de tomar el adaptador como integración final. |
-| Prueba integral | No está validado el recorrido Node → PostgreSQL real: la conexión `pg` terminó en timeout antes de recibir respuesta a `SSLRequest`. Su diagnóstico está pausado por decisión del usuario; la prueba local con cliente simulado no lo sustituye. |
+| P2 | Clases, DDL y migración alineados con el diagrama recibido. Migración aplicada a Supabase sobre las tablas vacías verificadas. Pruebas en PostgreSQL embebido cubren persistencia, herencia y cardinalidades. El informe PDF aún debe actualizarse. |
+| Prueba integral | Validada con Gemini y ambos proyectos Supabase: pregunta → aclaración → lectura P1 → respuesta → persistencia P2. Ingreso neto octubre de 2025 = 5580,00, conciliado mediante consulta independiente. La relectura desde otra conexión confirma la persistencia. Esto no sustituye la conciliación con las fuentes operacionales ni la matriz de todas las preguntas. |
 | Alcance | Las variantes de «mejor canal» no están en las siete consultas autorizadas. Las tres preguntas adicionales se reservaron para P4. |
 
 No se deben presentar el DDL, el diagrama ni las consultas ejecutadas por separado como prueba de una BDOO operativa de extremo a extremo. Tampoco se modificaron las políticas de acceso de P1.

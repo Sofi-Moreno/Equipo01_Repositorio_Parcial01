@@ -1,10 +1,11 @@
 # Integración local de trazabilidad P3 → P2
 
-[`trazabilidad.js`](trazabilidad.js) conecta las etapas del agente con las **tablas actuales** del [DDL de P2](../Equipo01_DataMart_Parcial01/Equipo01_BDOO_DDL_Parcial01.sql), sin modificar el esquema ni insertar hechos en P1. Es un adaptador probado con clientes simulados; **no** se ha ejecutado contra tablas P2 reales ni resuelve la discrepancia entre diagrama y DDL descrita en [Decisiones y estado](DECISIONES_Y_ESTADO_P3.md).
+[`trazabilidad.js`](trazabilidad.js) conecta las etapas del agente con las tablas del [DDL de P2](../Equipo01_DataMart_Parcial01/Equipo01_BDOO_DDL_Parcial01.sql), sin insertar hechos en P1. Se prueba con clientes simulados y PostgreSQL embebido. [Conexión y modelo](CONEXION_Y_MODELO.md) describe la integración actual con las clases del diagrama y la migración, ya aplicada en P2 Supabase con conexión TLS verificada. Falta completar P1 para demostrar una conversación con ambos proyectos remotos.
 
 ## Requisitos para usarlo
 
 - P2 crea previamente una fila en `sesiones` y mantiene **exactamente una** fila en `intenciones` por cada nombre lógico usado por el intérprete (`analizar_ventas`, `analizar_rentabilidad`, `comparar_rentabilidad`, `identificar_producto_mas_vendido`). El adaptador recibe `sesionId`; no crea usuarios, sesiones ni intenciones.
+- La consola nueva sí prepara usuario, agente, sesión e intenciones mediante `crearSesion` antes de llamar al adaptador. La clase `Agente_Analitico` inyecta Gemini y persiste también las reglas específicas y el estado de aprobación.
 - `clienteP2` es un cliente PostgreSQL **dedicado durante cada operación** con permisos de lectura y escritura sobre las tablas P2; no se comparte simultáneamente entre solicitudes. `clienteDatos` es **otro cliente**, con permisos `SELECT` sobre P1. No usar la cuenta de solo lectura de P1 para escribir en P2.
 - Las tablas del DDL P2 deben existir en la base P2 antes de ejecutar el adaptador. No se aplican automáticamente a Supabase.
 
@@ -30,7 +31,7 @@ const salida = await consultarPreguntaTrazada(pregunta_id, contexto);
 | Consulta autorizada | `consultas_analiticas`, `fuentes_datos`, `reglas_validaciones` | SQL fijo del catálogo, parámetros como JSON con ID de plantilla, tablas/atributos previstos en el DQL, y validación `consulta_autorizada = aprobada`. Si falta un dato o el catálogo rechaza la solicitud, no se crea una consulta ni se llama a P1. |
 | Ejecución y respuesta | `reglas_validaciones`, `resultados_consultas`, `respuestas_agente` | Estado de la consulta P1; `rc_datos_brutos` contiene **solo filas agregadas devueltas**, `rc_metadatos` contiene período, filtros, regla, campos de hechos, cantidad de filas y marca de vacío; la explicación vincula el resultado con la respuesta ejecutiva. |
 
-`fuentes_datos` enumera los atributos de `FactVentas` y las dimensiones definidos para cada una de las siete plantillas, no nombres solicitados por el usuario ni copias de tablas. La respuesta ejecutiva usa esa misma lista desde [`fuentes.js`](fuentes.js), junto con la regla del catálogo; la prueba local compara ambos registros, sin afirmar que P2 esté desplegado. `fd_tipo_dato` queda sin completar porque el catálogo no expone ese dato. Las columnas `pre_filtro`, `ca_parametros`, `rc_datos_brutos` y `rc_metadatos` son `TEXT` en el DDL: se guarda JSON serializado por convenio, no se introduce una migración implícita a `JSONB`.
+`fuentes_datos` enumera los atributos de `FactVentas` y las dimensiones definidos para cada una de las siete plantillas. La respuesta usa esa misma lista desde [`fuentes.js`](fuentes.js). El adaptador básico deja `fd_tipo_dato` sin completar; la integración del modelo lo completa a partir del contrato DDL de P1 y registra las reglas heredadas. Las columnas `pre_filtro`, `ca_parametros`, `rc_datos_brutos` y `rc_metadatos` siguen siendo `TEXT` y guardan JSON serializado.
 
 ## Fallos y garantías
 

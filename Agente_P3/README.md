@@ -1,16 +1,23 @@
 # Agente de consultas del Data Mart (P3)
 
-Este módulo interpreta las siete preguntas obligatorias, pide los datos que falten, selecciona **únicamente** consultas SQL parametrizadas del Data Mart de P1 y resume sus resultados con regla de cálculo, fuentes y advertencia SCD2 cuando corresponde. No genera SQL a partir del texto del usuario. Incluye un adaptador local de trazabilidad para el DDL de P2, **aún no probado en una base P2 real**. Las preguntas adicionales de P4 no están implementadas aquí.
+Este módulo interpreta las siete preguntas obligatorias, pide los datos que falten, selecciona **únicamente** consultas SQL parametrizadas del Data Mart de P1 y resume sus resultados con regla de cálculo, fuentes y advertencia SCD2 cuando corresponde. Gemini normaliza paráfrasis; el intérprete y catálogo locales validan lo que puede ejecutarse. Incluye consola interactiva, clases del modelo y persistencia P2. Ambos proyectos Supabase conectan con TLS verificado y se demostró una conversación completa con respuesta persistida. Las preguntas adicionales de P4 no están implementadas aquí.
+
+## Ejecutar el agente
+
+**Prueba remota completa verificada:** ambas bases conectan con TLS; Gemini y P1 respondieron ingreso neto de octubre de 2025 = **5580,00**. P2 conserva la sesión 2, pregunta 2, consulta 1, resultado 1 y respuesta 1, recuperados desde otra conexión. Ver [evidencia JSON](evidencias/verificacion_remota.json). `npm.cmd run demo:remota` repite la prueba e inserta una nueva sesión de demostración.
+
+Seguir [Conexión, Gemini y modelo de objetos](CONEXION_Y_MODELO.md). Desde `Agente_P3`: `npm ci --ignore-scripts`, completar `.env` a partir de `.env.example`, preparar el esquema BDOO y ejecutar `npm run check` y `npm start`. Requiere Node >=22 y Python 3. El archivo `.env` está excluido de Git.
 
 ## Primer recorrido
 
 1. Leé [`interprete.md`](interprete.md) para conocer el recorrido completo previsto del agente. Las decisiones y los pendientes están en [`DECISIONES_Y_ESTADO_P3.md`](DECISIONES_Y_ESTADO_P3.md).
 2. Revisá [`interprete.json`](interprete.json) para ver las siete preguntas y un ejemplo ya completado.
-3. Ejecutá las pruebas sin base de datos desde la raíz del repositorio (Python y Node 20):
+3. Ejecutá las pruebas sin servicios externos desde la raíz del repositorio (Python y Node >=22):
 
    ```text
    python -B -m unittest discover -s Agente_P3/tests -v
-    node --test Agente_P3/tests/catalogo.test.js Agente_P3/tests/flujo.test.js Agente_P3/tests/respuesta.test.js Agente_P3/tests/trazabilidad.test.js
+   npm --prefix Agente_P3 test
+   npm --prefix Agente_P3 run test:bdoo
    ```
 
 ## Mapa de archivos
@@ -35,11 +42,11 @@ Este módulo interpreta las siete preguntas obligatorias, pide los datos que fal
 [`tests/flujo.postgres.test.js`](tests/flujo.postgres.test.js) comprueba pregunta → aclaración → consulta real: para octubre de 2025 espera ingreso neto `5580.00` en la base de demostración. Es una prueba **separada** de las pruebas locales: no se omite silenciosamente si falta la conexión.
 
 1. Ejecutá `npm ci --ignore-scripts` dentro de `Agente_P3/` para instalar `pg` según `package-lock.json`.
-2. Configurá **localmente**, sin escribirlas en el repositorio, `PGHOST`, `PGDATABASE`, `PGUSER` y `PGPASSWORD` con los valores de **Supabase → Connect → Session pooler**. `PGPORT` es opcional (por defecto, `5432`). No compartas la contraseña ni el URI de conexión en un chat o commit.
+2. Configurá **localmente** `DATAMART_DATABASE_URL` y `DATAMART_SCHEMA` en `.env` con los valores de **Supabase → Connect → Session pooler**. No subas la contraseña ni el URI a Git.
 3. Ejecutá `npm run test:db` desde `Agente_P3/`.
 
 La conexión usa TLS con verificación de certificado y la prueba inicia una transacción `READ ONLY` que cierra con `ROLLBACK`. Lo ideal sigue siendo una cuenta con permisos `SELECT`. No modifica políticas ni datos. Si la base no contiene exactamente la semilla de P1+P3, adaptá la cifra esperada en un entorno de prueba aislado, no en producción.
 
 ## Estado y límites
 
-Las siete consultas fijas se ejecutaron en Supabase sobre los datos de demostración; los resultados esperados y las adaptaciones a P1 están en [`CAMBIOS_INTEGRACION_P3.md`](../Equipo01_DataMart_Parcial01/CAMBIOS_INTEGRACION_P3.md). La trazabilidad P2 solo tiene pruebas locales con dobles de base de datos. La prueba integral requiere configurar acceso PostgreSQL localmente y todavía no se ha ejecutado con una conexión real; sigue pendiente conciliar cifras con fuentes de P1. No agregar credenciales ni `opencode.json` al repositorio.
+Las siete consultas fijas se ejecutaron previamente en Supabase sobre los datos de demostración según [`CAMBIOS_INTEGRACION_P3.md`](../Equipo01_DataMart_Parcial01/CAMBIOS_INTEGRACION_P3.md). Las pruebas locales validan la migración y persistencia con PostgreSQL embebido (PGlite). Además se completó una conversación con Gemini y ambos proyectos Supabase reales, conciliada mediante otra consulta a P1 y recuperada desde una nueva conexión a P2. Esa demostración no sustituye la matriz de todas las preguntas ni la conciliación con fuentes operacionales de P1. No agregar credenciales ni `opencode.json` al repositorio.

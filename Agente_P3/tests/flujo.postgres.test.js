@@ -2,18 +2,12 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { Client } = require('pg');
+const { cargarEntorno, conectar } = require('../conexion.js');
 const { iniciarPregunta, continuarPregunta, consultarSolicitud } = require('../flujo.js');
 
 test('pregunta, aclaración y consulta parametrizada contra PostgreSQL real', { timeout: 20000 }, async () => {
-  const requeridas = ['PGHOST', 'PGDATABASE', 'PGUSER', 'PGPASSWORD'];
-  const faltantes = requeridas.filter((nombre) => !process.env[nombre]);
-  if (faltantes.length) {
-    throw new Error(`Configure localmente estas variables: ${faltantes.join(', ')}`);
-  }
-
-  const cliente = new Client({ ssl: true, connectionTimeoutMillis: 10000, query_timeout: 10000 });
-  await cliente.connect();
+  cargarEntorno();
+  const cliente = await conectar('datos');
   try {
     await cliente.query('BEGIN READ ONLY');
 

@@ -3,10 +3,20 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "test": "node --test tests/catalogo.test.js tests/flujo.test.js tests/respuesta.test.js tests/trazabilidad.test.js",
+    "start": "node cli.js",
+    "check": "node verificar_conexiones.js",
+    "demo:remota": "node verificar_flujo_remoto.js",
+    "test": "node --test tests/catalogo.test.js tests/flujo.test.js tests/respuesta.test.js tests/trazabilidad.test.js tests/integracion.test.js",
+    "test:bdoo": "node --test tests/bdoo.postgres.test.js",
     "test:db": "node --test tests/flujo.postgres.test.js"
   },
-  "devDependencies": {
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
     "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.13"
   }
 }

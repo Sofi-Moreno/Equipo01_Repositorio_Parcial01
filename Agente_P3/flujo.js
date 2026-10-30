@@ -10,7 +10,7 @@ function pasarAlInterprete(entrada) {
   // JSON ASCII evita diferencias de codificación de stdin/stdout en Windows.
   const input = JSON.stringify(entrada).replace(/[\u007f-\uffff]/g,
     (caracter) => `\\u${caracter.charCodeAt(0).toString(16).padStart(4, '0')}`);
-  const salida = execFileSync('python', ['-B', path.join(__dirname, 'puente_interprete.py')], {
+  const salida = execFileSync(process.env.PYTHON_BIN || 'python', ['-B', path.join(__dirname, 'puente_interprete.py')], {
     cwd: __dirname, input, encoding: 'utf8',
   });
   return JSON.parse(salida);

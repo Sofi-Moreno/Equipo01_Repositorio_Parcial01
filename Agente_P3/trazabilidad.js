@@ -44,10 +44,10 @@ async function buscarPregunta(clienteP2, preguntaId, sesionId) {
 }
 
 // P2 provee una sesión existente y exactamente una intención por nombre lógico.
-async function crearPreguntaTrazada(pregunta, { clienteP2, sesionId }) {
+async function crearPreguntaTrazada(pregunta, { clienteP2, sesionId, interpretar = iniciarPregunta }) {
   exigirCliente(clienteP2, 'clienteP2');
   if (!idValido(sesionId)) throw new TypeError('Se requiere un sesionId existente.');
-  const solicitud = iniciarPregunta(pregunta);
+  const solicitud = await interpretar(pregunta);
   return transaccion(clienteP2, async () => {
     let intencionId = null;
     if (solicitud.intencion !== null) {
@@ -65,12 +65,19 @@ async function crearPreguntaTrazada(pregunta, { clienteP2, sesionId }) {
   });
 }
 
-async function aclararPreguntaTrazada(preguntaId, respuesta, { clienteP2, sesionId }) {
+async function aclararPreguntaTrazada(preguntaId, respuesta, { clienteP2, sesionId, aclarar = continuarPregunta }) {
   exigirCliente(clienteP2, 'clienteP2');
   if (!idValido(preguntaId) || !idValido(sesionId)) throw new TypeError('Se requieren IDs válidos.');
+  // La llamada de IA no mantiene bloqueada una fila durante una petición de red.
+  const anterior = await clienteP2.query(
+    'SELECT pre_filtro FROM preguntas WHERE pre_id = $1 AND ses_id = $2', [preguntaId, sesionId]);
+  if (anterior.rows.length !== 1) throw new Error('La pregunta no pertenece a la sesión.');
+  const estadoAnterior = anterior.rows[0].pre_filtro;
+  const interpretada = await aclarar(JSON.parse(estadoAnterior).solicitud, respuesta);
   return transaccion(clienteP2, async () => {
     const historial = await buscarPregunta(clienteP2, preguntaId, sesionId);
-    const solicitud = continuarPregunta(historial.solicitud, respuesta);
+    if (json(historial) !== estadoAnterior) throw new Error('La pregunta cambió; vuelva a intentar la aclaración.');
+    const solicitud = interpretada;
     historial.aclaraciones.push({ pregunta: historial.solicitud.aclaraciones_usuario[0], respuesta });
     historial.solicitud = solicitud;
     await clienteP2.query('UPDATE preguntas SET pre_filtro = $1 WHERE pre_id = $2 AND ses_id = $3',
@@ -108,7 +115,8 @@ async function prepararRegistro(clienteP2, preguntaId, sesionId) {
   });
 }
 
-async function consultarPreguntaTrazada(preguntaId, { clienteP2, clienteDatos, sesionId }) {
+async function consultarPreguntaTrazada(preguntaId, { clienteP2, clienteDatos, sesionId,
+  consultar = consultarYResponder, registrarReglas = async () => {} }) {
   exigirCliente(clienteP2, 'clienteP2');
   exigirCliente(clienteDatos, 'clienteDatos');
   if (clienteP2 === clienteDatos) throw new Error('P1 y P2 requieren clientes separados.');
@@ -116,7 +124,7 @@ async function consultarPreguntaTrazada(preguntaId, { clienteP2, clienteDatos, s
   const { solicitud, consultaId } = await prepararRegistro(clienteP2, preguntaId, sesionId);
   let resultado;
   try {
-    resultado = await consultarYResponder(solicitud, clienteDatos);
+    resultado = await consultar(solicitud, clienteDatos);
   } catch (error) {
     await clienteP2.query(
       'INSERT INTO reglas_validaciones (ca_id, rv_nombre, rv_estado, rv_mensaje) VALUES ($1, $2, $3, $4)',
@@ -125,6 +133,7 @@ async function consultarPreguntaTrazada(preguntaId, { clienteP2, clienteDatos, s
     throw error;
   }
   const ids = await transaccion(clienteP2, async () => {
+    await registrarReglas(clienteP2, consultaId, solicitud, resultado);
     await clienteP2.query(
       'INSERT INTO reglas_validaciones (ca_id, rv_nombre, rv_estado, rv_mensaje) VALUES ($1, $2, $3, $4)',
       [consultaId, 'consulta_p1', 'aprobada', `Filas agregadas: ${resultado.filas.length}.`],
@@ -134,6 +143,7 @@ async function consultarPreguntaTrazada(preguntaId, { clienteP2, clienteDatos, s
       filtros: resultado.filtros, regla_calculo: resultado.regla_calculo,
       campos_fact_ventas: resultado.campos_fact_ventas,
       cantidad_filas: resultado.filas.length, sin_registros: resultado.sin_registros,
+      duracion_ms: resultado.duracion_ms ?? null,
     };
     const { rows } = await clienteP2.query(
       'INSERT INTO resultados_consultas (ca_id, rc_datos_brutos, rc_metadatos) VALUES ($1, $2, $3) RETURNING rc_id',
