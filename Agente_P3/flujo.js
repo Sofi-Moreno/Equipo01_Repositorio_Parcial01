@@ -3,6 +3,7 @@
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 const { prepararConsulta, ejecutarConsulta } = require('./catalogo.js');
+const { redactarRespuesta } = require('./respuesta.js');
 
 // Python reconoce la intención; el catálogo, no Python, decide qué SQL está permitido.
 function pasarAlInterprete(entrada) {
@@ -29,4 +30,9 @@ async function consultarSolicitud(solicitud, cliente) {
   return ejecutarConsulta(solicitud, cliente);
 }
 
-module.exports = { iniciarPregunta, continuarPregunta, prepararConsulta, consultarSolicitud };
+async function consultarYResponder(solicitud, cliente) {
+  const resultado = await consultarSolicitud(solicitud, cliente);
+  return { ...resultado, respuesta_ejecutiva: redactarRespuesta(resultado) };
+}
+
+module.exports = { iniciarPregunta, continuarPregunta, prepararConsulta, consultarSolicitud, consultarYResponder };
