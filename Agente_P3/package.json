@@ -1,0 +1,12 @@
+{
+  "name": "equipo01-agente-p3",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node --test tests/catalogo.test.js tests/flujo.test.js tests/respuesta.test.js",
+    "test:db": "node --test tests/flujo.postgres.test.js"
+  },
+  "devDependencies": {
+    "pg": "^8.23.1"
+  }
+}
