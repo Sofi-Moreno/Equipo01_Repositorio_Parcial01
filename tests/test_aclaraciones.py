@@ -44,7 +44,7 @@ class AclaracionesTest(unittest.TestCase):
             "Compare el margen de dos canales durante los últimos tres meses disponibles."
         )
         salida = continuar_aclaracion(inicial, "E-commerce y Físico")
-        self.assertEqual(salida["filtros"], {"canales": ["E-commerce", "Fisico"]})
+        self.assertEqual(salida["filtros"], {"canales": ["E-commerce", "Tienda Física"]})
         self.assertEqual(salida["periodo"], {"tipo": "ultimos_meses_disponibles", "cantidad": 3})
         self.assertEqual(salida["estado"], "interpretada")
         self.assertFalse(salida["listo_para_consulta"])

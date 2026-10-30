@@ -92,7 +92,7 @@ class InterpreteTest(unittest.TestCase):
         salida = interpretar(
             "Compare el margen de E-commerce y Físico durante los últimos tres meses disponibles."
         )
-        self.assertEqual(salida["filtros"], {"canales": ["E-commerce", "Fisico"]})
+        self.assertEqual(salida["filtros"], {"canales": ["E-commerce", "Tienda Física"]})
         self.assertEqual(salida["aclaraciones_usuario"], [])
         self.assertEqual(salida["estado"], "interpretada")
         self.assertFalse(salida["listo_para_consulta"])

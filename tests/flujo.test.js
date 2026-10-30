@@ -39,7 +39,7 @@ test('producto conserva aclaraciones de período y categoría en dos turnos', ()
 test('comparación de canales usa los tres meses con ventas, no la fecha de hoy', () => {
   let solicitud = iniciarPregunta('Compare el margen de dos canales durante los últimos tres meses disponibles.');
   solicitud = continuarPregunta(solicitud, 'Fisico y E-commerce');
-  assert.deepEqual(prepararConsulta(solicitud).parametros, ['Fisico', 'E-commerce']);
+  assert.deepEqual(prepararConsulta(solicitud).parametros, ['Tienda Física', 'E-commerce']);
   assert.match(prepararConsulta(solicitud).sql, /SELECT DISTINCT t\.AnioMes/);
 });
 

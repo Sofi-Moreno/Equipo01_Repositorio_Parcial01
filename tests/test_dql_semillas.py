@@ -9,6 +9,7 @@ from pathlib import Path
 CARPETA = Path(__file__).resolve().parents[1] / "Equipo01_DataMart_Parcial01"
 DDL = (CARPETA / "Equipo01_DataMart_DDL_Parcial01.sql").read_text(encoding="utf-8")
 DML = (CARPETA / "Equipo01_DataMart_DML_Parcial01.sql").read_text(encoding="utf-8")
+INCREMENTAL = (CARPETA / "Equipo01_DataMart_DML_P3_Incremental.sql").read_text(encoding="utf-8")
 DQL = (CARPETA / "Equipo01_DataMart_DQL_Parcial01.sql").read_text(encoding="utf-8")
 
 
@@ -42,13 +43,16 @@ class SemillaSQLTest(unittest.TestCase):
         self.assertEqual(len(consultar(self.db, "ranking_margen_categorias", (*octubre, 5))), 5)
         self.assertEqual(consultar(self.db, "ranking_margen_categorias", (*octubre, 5))[0][0], "Electrónica")
         self.assertEqual(consultar(self.db, "ranking_ticket_sucursales", octubre)[0][0], "Sucursal Caracas Principal")
-        self.assertEqual(consultar(self.db, "ranking_valor_canales", octubre)[0][0], "Fisico")
-        self.assertEqual(consultar(self.db, "lider_producto_categoria", (*octubre, "electronica"))[0][0], "Laptop Pro 15")
+        self.assertEqual(consultar(self.db, "ranking_valor_canales", octubre)[0][0], "Tienda Física")
+        self.assertEqual(consultar(self.db, "lider_producto_categoria", (*octubre, "electronica")),
+                         [("Laptop Pro 15", 2)])
         self.assertEqual(consultar(self.db, "ingreso_neto_mensual", octubre)[0][0], "2025-10")
         caida = consultar(self.db, "mayor_caida_segmento",
                           (*octubre, "2025-11-01", "2025-11-30"))
-        self.assertEqual(caida, [("Regular", 7, 1, 6)])
-        canales = consultar(self.db, "comparacion_margen_canales", ("Fisico", "E-commerce"))
+        self.assertEqual(len(caida), 1)
+        self.assertEqual(caida[0][:3], ("Regular", 7, 1))
+        self.assertAlmostEqual(caida[0][3], 100 * 6 / 7)
+        canales = consultar(self.db, "comparacion_margen_canales", ("Tienda Física", "E-commerce"))
         self.assertEqual(len(canales), 6)
         self.assertEqual({fila[0] for fila in canales}, {"2026-08", "2026-09", "2026-10"})
 
@@ -63,6 +67,80 @@ class SemillaSQLTest(unittest.TestCase):
         self.assertGreater(self.db.execute(
             "SELECT COUNT(*) FROM FactVentas WHERE Sk_Dim_Promocion = 0"
         ).fetchone()[0], 0)
+
+    def test_caida_porcentual_prioriza_proporcion_y_devuelve_todos_los_empates(self):
+        with sqlite3.connect(":memory:") as db:
+            db.executescript("""
+                CREATE TABLE DimTiempo (Sk_Dim_Tiempo INT, FechaCompleta TEXT);
+                CREATE TABLE DimCliente (Sk_Dim_Cliente INT, Segmento TEXT);
+                CREATE TABLE FactVentas (Sk_Dim_Tiempo INT, Sk_Dim_Cliente INT, CantidadVendida NUMERIC);
+                INSERT INTO DimTiempo VALUES (1, '2025-10-15'), (2, '2025-11-15');
+                INSERT INTO DimCliente VALUES
+                    (1, 'Grande'), (2, 'Pequeno'), (3, 'Empate'),
+                    (4, 'Sin ventas actuales'), (5, 'Sin ventas anteriores'), (6, 'Sin caida');
+                INSERT INTO FactVentas VALUES
+                    (1, 1, 100), (2, 1, 60),
+                    (1, 2, 10), (2, 2, 5),
+                    (1, 3, 20), (2, 3, 10),
+                    (1, 4, 30), (2, 5, 2),
+                    (1, 6, 7), (2, 6, 7);
+            """)
+            parametros = ("2025-10-01", "2025-10-31", "2025-11-01", "2025-11-30")
+            self.assertEqual(consultar(db, "mayor_caida_segmento", parametros), [
+                ("Empate", 20, 10, 50.0), ("Pequeno", 10, 5, 50.0),
+            ])
+            self.assertEqual(consultar(db, "mayor_caida_segmento",
+                                      ("2024-01-01", "2024-01-31", *parametros[2:])), [])
+
+    def test_producto_lider_se_elige_por_unidades_y_no_por_ingreso_neto(self):
+        with sqlite3.connect(":memory:") as db:
+            db.create_function("translate", 3, lambda texto, origen, destino:
+                               texto.translate(str.maketrans(origen, destino)))
+            db.executescript("""
+                CREATE TABLE DimTiempo (Sk_Dim_Tiempo INT, FechaCompleta TEXT);
+                CREATE TABLE DimProducto (Sk_Dim_Producto INT, NombreProducto TEXT, Categoria TEXT);
+                CREATE TABLE FactVentas (Sk_Dim_Tiempo INT, Sk_Dim_Producto INT,
+                    CantidadVendida NUMERIC, MontoVenta NUMERIC, MontoDescuento NUMERIC);
+                INSERT INTO DimTiempo VALUES (1, '2025-10-15'), (2, '2025-11-15');
+                INSERT INTO DimProducto VALUES (1, 'Caro', 'Electrónica'),
+                    (2, 'Popular', 'Electrónica'), (3, 'Otra categoría', 'Hogar');
+                INSERT INTO FactVentas VALUES (1, 1, 1, 1000, 0), (1, 2, 4, 200, 0),
+                    (1, 3, 100, 100, 0), (2, 1, 200, 1000, 0);
+            """)
+            self.assertEqual(consultar(db, "lider_producto_categoria",
+                                      ("2025-10-01", "2025-10-31", "electronica")),
+                             [("Popular", 4)])
+
+    def test_incremental_agrega_solo_p3_y_se_puede_repetir(self):
+        with sqlite3.connect(":memory:") as db:
+            db.execute("PRAGMA foreign_keys = ON")
+            db.create_function("translate", 3, lambda texto, origen, destino:
+                               texto.translate(str.maketrans(origen, destino)))
+            db.executescript(DDL.replace("GENERATED BY DEFAULT AS IDENTITY", ""))
+            base = DML.split("-- Datos de demostracion adicionales para las siete preguntas")[0]
+            db.executescript(base)
+            # Emular la carga P1 original: sus tres hechos sin promoción usan -1.
+            db.execute("UPDATE FactVentas SET Sk_Dim_Promocion = -1 WHERE Sk_Dim_Promocion = 0")
+            db.execute("DELETE FROM DimPromocion WHERE Sk_Dim_Promocion = 0")
+            originales = db.execute("""
+                SELECT NumeroTransaccion, NumeroLinea, Sk_Dim_Promocion
+                FROM FactVentas ORDER BY NumeroTransaccion, NumeroLinea
+            """).fetchall()
+            self.assertEqual(len(originales), 4)
+
+            for _ in range(2):
+                db.executescript(INCREMENTAL)
+                self.assertEqual(db.execute("SELECT COUNT(*) FROM FactVentas").fetchone()[0], 19)
+                self.assertEqual(db.execute("""
+                    SELECT NumeroTransaccion, NumeroLinea, Sk_Dim_Promocion
+                    FROM FactVentas WHERE NumeroTransaccion LIKE 'TXN-100%'
+                    ORDER BY NumeroTransaccion, NumeroLinea
+                """).fetchall(), originales)
+                self.assertEqual(consultar(db, "ingreso_neto_mensual",
+                                          ("2025-10-01", "2025-10-31")), [("2025-10", 5580)])
+                self.assertEqual(consultar(db, "lider_producto_categoria",
+                                          ("2025-10-01", "2025-10-31", "electronica")),
+                                 [("Laptop Pro 15", 2)])
 
 
 if __name__ == "__main__":

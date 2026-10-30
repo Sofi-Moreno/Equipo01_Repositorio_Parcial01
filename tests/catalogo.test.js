@@ -24,6 +24,18 @@ test('catálogo cerrado con campos físicos de FactVentas y siete consultas', ()
   }
 });
 
+test('el contrato refleja caída porcentual con empates y producto líder por unidades', () => {
+  const caida = CATALOGO.find((entrada) => entrada.id === 'mayor_caida_segmento');
+  const producto = CATALOGO.find((entrada) => entrada.id === 'lider_producto_categoria');
+  assert.equal(caida.limite, 1); // Primer puesto, no una sola fila.
+  assert.deepEqual(caida.columnasResultado,
+    ['segmento', 'valor_anterior', 'valor_actual', 'caida_porcentual']);
+  assert.match(caida.reglaCalculo, /todos los empates/);
+  assert.deepEqual(producto.camposFactVentas, ['CantidadVendida']);
+  assert.equal(producto.reglaCalculo, 'SUM(CantidadVendida)');
+  assert.deepEqual(producto.columnasResultado, ['producto', 'unidades_vendidas']);
+});
+
 test('selecciona el ID esperado para las siete familias y el ejemplo de octubre', () => {
   casos.forEach((caso, indice) => {
     const id = ids[indice === 7 ? 1 : indice];
@@ -50,7 +62,7 @@ test('valida los parámetros completos de las siete consultas antes de preparar 
     } else if (indice !== 5) {
       solicitud.periodo = copia(rango);
     }
-    if (indice === 5) solicitud.filtros.canales = ['E-commerce', 'Fisico'];
+    if (indice === 5) solicitud.filtros.canales = ['E-commerce', 'Tienda Física'];
     if (indice === 6) solicitud.filtros.categoria = 'electronica';
     const validacion = validarConsulta(solicitud);
     assert.equal(validacion.consulta_id, ids[indice]);
@@ -88,13 +100,13 @@ test('valida dos períodos ordenados, sin aceptar rangos invertidos ni fechas im
 
 test('valida cantidad y pertenencia de los dos canales', () => {
   const solicitud = copia(casos[5].salida_esperada);
-  solicitud.filtros.canales = ['E-commerce', 'Fisico'];
+  solicitud.filtros.canales = ['E-commerce', 'Tienda Física'];
   solicitud.aclaraciones_usuario = [];
   solicitud.estado = 'interpretada';
   assert.equal(validarConsulta(solicitud).valida_estructuralmente, true);
-  solicitud.filtros.canales = ['Fisico', 'Fisico'];
+  solicitud.filtros.canales = ['Tienda Física', 'Tienda Física'];
   assert.equal(validarConsulta(solicitud).estado, 'invalida');
-  solicitud.filtros.canales = ['Fisico', 'Otro'];
+  solicitud.filtros.canales = ['Tienda Física', 'Otro'];
   assert.equal(validarConsulta(solicitud).estado, 'invalida');
 });
 
@@ -136,7 +148,7 @@ test('solo prepara SQL fijo con parámetros derivados del período y los filtros
     ] };
     if (indice === 5) {
       solicitud.periodo = { tipo: 'ultimos_meses_disponibles', cantidad: 3 };
-      solicitud.filtros.canales = ['Fisico', 'E-commerce'];
+      solicitud.filtros.canales = ['Tienda Física', 'E-commerce'];
     }
     if (indice === 6) solicitud.filtros.categoria = 'electronica';
     return solicitud;
@@ -145,7 +157,7 @@ test('solo prepara SQL fijo con parámetros derivados del período y los filtros
     ['2025-10-01', '2025-10-31'], ['2025-10-01', '2025-10-31', 5],
     ['2025-10-01', '2025-10-31'],
     ['2025-10-01', '2025-10-31', '2025-11-01', '2025-11-30'],
-    ['2025-10-01', '2025-10-31'], ['Fisico', 'E-commerce'],
+    ['2025-10-01', '2025-10-31'], ['Tienda Física', 'E-commerce'],
     ['2025-10-01', '2025-10-31', 'electronica'],
   ];
   casosCompletos.forEach((solicitud, indice) => {
@@ -157,6 +169,31 @@ test('solo prepara SQL fijo con parámetros derivados del período y los filtros
     assert.equal(preparada.sql.includes('2025-10-01'), false);
   });
   assert.equal(prepararConsulta(casos[0].salida_esperada).sql, null);
+});
+
+test('las plantillas fijas conservan el porcentaje, empates y unidades', () => {
+  const solicitudCaida = copia(casos[3].salida_esperada);
+  solicitudCaida.estado = 'interpretada';
+  solicitudCaida.aclaraciones_usuario = [];
+  solicitudCaida.periodo.periodos = [
+    { rol: 'anterior', tipo: 'rango_fechas', desde: '2025-10-01', hasta: '2025-10-31' },
+    { rol: 'actual', tipo: 'rango_fechas', desde: '2025-11-01', hasta: '2025-11-30' },
+  ];
+  const preparadaCaida = prepararConsulta(solicitudCaida);
+  assert.match(preparadaCaida.sql, /100\.0 \* \(a\.unidades - b\.unidades\) \/ NULLIF\(a\.unidades, 0\)/);
+  assert.match(preparadaCaida.sql, /DENSE_RANK\(\) OVER \(ORDER BY caida_porcentual DESC\)/);
+  assert.match(preparadaCaida.sql, /WHERE posicion = 1/);
+  assert.doesNotMatch(preparadaCaida.sql, /LIMIT 1/);
+
+  const solicitudProducto = copia(casos[6].salida_esperada);
+  solicitudProducto.estado = 'interpretada';
+  solicitudProducto.aclaraciones_usuario = [];
+  solicitudProducto.periodo = { tipo: 'rango_fechas', desde: '2025-10-01', hasta: '2025-10-31' };
+  solicitudProducto.filtros.categoria = 'electronica';
+  const preparadaProducto = prepararConsulta(solicitudProducto);
+  assert.match(preparadaProducto.sql, /SUM\(f\.CantidadVendida\) AS unidades_vendidas/);
+  assert.doesNotMatch(preparadaProducto.sql, /MontoVenta|MontoDescuento/);
+  assert.deepEqual(preparadaProducto.parametros, ['2025-10-01', '2025-10-31', 'electronica']);
 });
 
 test('ejecución inyectada conserva vacío y rechaza solicitudes sin aclarar', async () => {
