@@ -1,0 +1,139 @@
+{
+  "fecha_utc": "2026-10-30T20:48:47.477Z",
+  "estado": "verificado",
+  "modelo": "gemini-3.5-flash-lite",
+  "sesion_id": 2,
+  "pregunta_id": 2,
+  "consulta_id_p2": 1,
+  "resultado_id": 1,
+  "respuesta_id": 1,
+  "pregunta": "Muéstrame el ingreso neto por mes",
+  "aclaracion": "octubre de 2025",
+  "intencion": "analizar_ventas",
+  "consulta": "ingreso_neto_mensual",
+  "parametros": {
+    "consulta_id": "ingreso_neto_mensual",
+    "valores": [
+      "2025-10-01",
+      "2025-10-31"
+    ]
+  },
+  "sql": "SELECT t.AnioMes AS mes,\n       SUM(f.MontoVenta - f.MontoDescuento) AS ingreso_neto\nFROM FactVentas f\nJOIN DimTiempo t ON t.Sk_Dim_Tiempo = f.Sk_Dim_Tiempo\nWHERE t.FechaCompleta BETWEEN $1::date AND $2::date\nGROUP BY t.AnioMes\nORDER BY t.AnioMes;",
+  "filas": [
+    {
+      "mes": "2025-10",
+      "ingreso_neto": "5580.00"
+    }
+  ],
+  "control_independiente_p1": {
+    "ingreso_neto": "5580.00"
+  },
+  "historial": {
+    "solicitud": {
+      "estado": "interpretada",
+      "intencion": "analizar_ventas",
+      "metrica": "ingreso_neto",
+      "dimensiones": [
+        {
+          "entidad": "tiempo",
+          "nivel": "mes"
+        }
+      ],
+      "periodo": {
+        "tipo": "rango_fechas",
+        "desde": "2025-10-01",
+        "hasta": "2025-10-31"
+      },
+      "filtros": {},
+      "operacion": "serie_temporal",
+      "limite": null,
+      "aclaraciones_usuario": [],
+      "pendientes_equipo": [],
+      "listo_para_consulta": false,
+      "interpretacion_ia": {
+        "proveedor": "Gemini",
+        "modelo": "gemini-3.5-flash-lite",
+        "texto_original": "Muéstrame el ingreso neto por mes",
+        "texto_normalizado": "¿Cuál fue el ingreso neto por mes?"
+      },
+      "aclaracion_interpretada": {
+        "proveedor": "interprete_local",
+        "texto_original": "octubre de 2025"
+      }
+    },
+    "aclaraciones": [
+      {
+        "pregunta": "¿Qué período desea analizar?",
+        "respuesta": "octubre de 2025"
+      }
+    ]
+  },
+  "metadatos": {
+    "consulta_id": "ingreso_neto_mensual",
+    "periodo": {
+      "tipo": "rango_fechas",
+      "desde": "2025-10-01",
+      "hasta": "2025-10-31"
+    },
+    "filtros": {},
+    "regla_calculo": "SUM(MontoVenta - MontoDescuento)",
+    "campos_fact_ventas": [
+      "MontoVenta",
+      "MontoDescuento"
+    ],
+    "cantidad_filas": 1,
+    "sin_registros": false,
+    "duracion_ms": 304
+  },
+  "reglas": [
+    {
+      "rv_nombre": "consulta_autorizada",
+      "rv_estado": "aprobada",
+      "subtipo": "reglas_validaciones"
+    },
+    {
+      "rv_nombre": "consulta_p1",
+      "rv_estado": "aprobada",
+      "subtipo": "reglas_validaciones"
+    },
+    {
+      "rv_nombre": "respuesta_con_evidencia",
+      "rv_estado": "aprobada",
+      "subtipo": "reglas_respuesta"
+    },
+    {
+      "rv_nombre": "seguridad_lectura",
+      "rv_estado": "aprobada",
+      "subtipo": "reglas_seguridad"
+    },
+    {
+      "rv_nombre": "sintaxis_catalogo",
+      "rv_estado": "aprobada",
+      "subtipo": "reglas_sintaxis"
+    }
+  ],
+  "fuentes": [
+    {
+      "fd_nombre_tabla": "DimTiempo",
+      "fd_atributo": "AnioMes",
+      "fd_tipo_dato": "varchar"
+    },
+    {
+      "fd_nombre_tabla": "DimTiempo",
+      "fd_atributo": "FechaCompleta",
+      "fd_tipo_dato": "date"
+    },
+    {
+      "fd_nombre_tabla": "FactVentas",
+      "fd_atributo": "MontoDescuento",
+      "fd_tipo_dato": "numeric"
+    },
+    {
+      "fd_nombre_tabla": "FactVentas",
+      "fd_atributo": "MontoVenta",
+      "fd_tipo_dato": "numeric"
+    }
+  ],
+  "respuesta": "Período: 2025-10-01 a 2025-10-31. Ingreso neto por mes: 2025-10: 5580.00. Consulta autorizada: ingreso_neto_mensual. Regla de cálculo: SUM(MontoVenta - MontoDescuento). Fuentes: FactVentas.MontoVenta, FactVentas.MontoDescuento, DimTiempo.AnioMes, DimTiempo.FechaCompleta.",
+  "persistencia_comprobada_desde_otra_conexion": true
+}

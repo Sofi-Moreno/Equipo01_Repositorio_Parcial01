@@ -1,0 +1,144 @@
+{
+  "casos": [
+    {
+      "pregunta": "¿Cuál fue el ingreso neto por mes?",
+      "salida_esperada": {
+        "estado": "requiere_aclaracion",
+        "intencion": "analizar_ventas",
+        "metrica": "ingreso_neto",
+        "dimensiones": [{ "entidad": "tiempo", "nivel": "mes" }],
+        "periodo": { "tipo": "no_especificado" },
+        "filtros": {},
+        "operacion": "serie_temporal",
+        "limite": null,
+        "aclaraciones_usuario": ["¿Qué período desea analizar?"],
+        "pendientes_equipo": [],
+        "listo_para_consulta": false
+      }
+    },
+    {
+      "pregunta": "¿Cuáles son las cinco categorías con mayor margen bruto?",
+      "salida_esperada": {
+        "estado": "requiere_aclaracion",
+        "intencion": "analizar_rentabilidad",
+        "metrica": "margen_bruto",
+        "dimensiones": [{ "entidad": "producto", "nivel": "categoria" }],
+        "periodo": { "tipo": "no_especificado" },
+        "filtros": {},
+        "operacion": "ranking_descendente",
+        "limite": 5,
+        "aclaraciones_usuario": ["¿Qué período desea analizar?"],
+        "pendientes_equipo": [],
+        "listo_para_consulta": false
+      }
+    },
+    {
+      "pregunta": "¿Qué sucursal presenta el ticket promedio más alto?",
+      "salida_esperada": {
+        "estado": "requiere_aclaracion",
+        "intencion": "analizar_ventas",
+        "metrica": "ticket_promedio",
+        "dimensiones": [{ "entidad": "sucursal", "nivel": "sucursal" }],
+        "periodo": { "tipo": "no_especificado" },
+        "filtros": {},
+        "operacion": "ranking_descendente",
+        "limite": 1,
+        "aclaraciones_usuario": ["¿Qué período desea analizar?"],
+        "pendientes_equipo": [],
+        "listo_para_consulta": false
+      }
+    },
+    {
+      "pregunta": "¿Qué segmento de clientes redujo más su volumen de compra?",
+      "salida_esperada": {
+        "estado": "requiere_aclaracion",
+        "intencion": "analizar_ventas",
+        "metrica": "volumen_compra",
+        "dimensiones": [{ "entidad": "cliente", "nivel": "segmento" }],
+        "periodo": {
+          "tipo": "comparacion_periodos",
+          "periodos": [
+            { "rol": "anterior", "tipo": "no_especificado" },
+            { "rol": "actual", "tipo": "no_especificado" }
+          ]
+        },
+        "filtros": {},
+        "operacion": "comparar_periodos_y_ordenar_caida",
+        "limite": 1,
+        "aclaraciones_usuario": ["¿Qué dos períodos desea comparar?"],
+        "pendientes_equipo": [],
+        "listo_para_consulta": false
+      }
+    },
+    {
+      "pregunta": "¿Qué canal concentra el mayor valor de ventas?",
+      "salida_esperada": {
+        "estado": "requiere_aclaracion",
+        "intencion": "analizar_ventas",
+        "metrica": "valor_ventas",
+        "dimensiones": [{ "entidad": "canal", "nivel": "tipo_canal" }],
+        "periodo": { "tipo": "no_especificado" },
+        "filtros": {},
+        "operacion": "ranking_descendente",
+        "limite": 1,
+        "aclaraciones_usuario": ["¿Qué período desea analizar?"],
+        "pendientes_equipo": [],
+        "listo_para_consulta": false
+      }
+    },
+    {
+      "pregunta": "Compare el margen de dos canales durante los últimos tres meses disponibles.",
+      "salida_esperada": {
+        "estado": "requiere_aclaracion",
+        "intencion": "comparar_rentabilidad",
+        "metrica": "margen_bruto",
+        "dimensiones": [
+          { "entidad": "tiempo", "nivel": "mes" },
+          { "entidad": "canal", "nivel": "tipo_canal" }
+        ],
+        "periodo": { "tipo": "ultimos_meses_disponibles", "cantidad": 3 },
+        "filtros": { "canales": [] },
+        "operacion": "comparacion_de_series_temporales",
+        "limite": null,
+        "aclaraciones_usuario": ["¿Cuáles dos canales desea comparar?"],
+        "pendientes_equipo": [],
+        "listo_para_consulta": false
+      }
+    },
+    {
+      "pregunta": "¿Qué producto lidera las ventas dentro de una categoría y periodo determinados?",
+      "salida_esperada": {
+        "estado": "requiere_aclaracion",
+        "intencion": "identificar_producto_mas_vendido",
+        "metrica": "ventas_producto",
+        "dimensiones": [{ "entidad": "producto", "nivel": "producto" }],
+        "periodo": { "tipo": "no_especificado" },
+        "filtros": { "categoria": null },
+        "operacion": "ranking_descendente",
+        "limite": 1,
+        "aclaraciones_usuario": [
+          "¿Qué período desea analizar?",
+          "¿Qué categoría desea analizar?"
+        ],
+        "pendientes_equipo": [],
+        "listo_para_consulta": false
+      }
+    },
+    {
+      "pregunta": "¿Cuáles fueron las 5 categorias con mayor margen bruto en el mes de octubre de 2025?",
+      "salida_esperada": {
+        "estado": "interpretada",
+        "intencion": "analizar_rentabilidad",
+        "metrica": "margen_bruto",
+        "dimensiones": [{ "entidad": "producto", "nivel": "categoria" }],
+        "periodo": { "tipo": "rango_fechas", "desde": "2025-10-01", "hasta": "2025-10-31" },
+        "filtros": {},
+        "operacion": "ranking_descendente",
+        "limite": 5,
+        "aclaraciones_usuario": [],
+        "pendientes_equipo": [],
+        "listo_para_consulta": false
+      }
+    }
+  ]
+}
