@@ -1,6 +1,6 @@
 # Agente de consultas del Data Mart (P3)
 
-Este módulo interpreta las siete preguntas obligatorias, pide los datos que falten, selecciona **únicamente** consultas SQL parametrizadas del Data Mart de P1 y resume sus resultados. No genera SQL a partir del texto del usuario. La persistencia con P2 y las preguntas adicionales de P4 no están implementadas aquí.
+Este módulo interpreta las siete preguntas obligatorias, pide los datos que falten, selecciona **únicamente** consultas SQL parametrizadas del Data Mart de P1 y resume sus resultados. No genera SQL a partir del texto del usuario. Incluye un adaptador local de trazabilidad para el DDL de P2, **aún no probado en una base P2 real**. Las preguntas adicionales de P4 no están implementadas aquí.
 
 ## Primer recorrido
 
@@ -10,7 +10,7 @@ Este módulo interpreta las siete preguntas obligatorias, pide los datos que fal
 
    ```text
    python -B -m unittest discover -s Agente_P3/tests -v
-   node --test Agente_P3/tests/catalogo.test.js Agente_P3/tests/flujo.test.js Agente_P3/tests/respuesta.test.js
+    node --test Agente_P3/tests/catalogo.test.js Agente_P3/tests/flujo.test.js Agente_P3/tests/respuesta.test.js Agente_P3/tests/trazabilidad.test.js
    ```
 
 ## Mapa de archivos
@@ -25,6 +25,8 @@ Este módulo interpreta las siete preguntas obligatorias, pide los datos que fal
 | [`puente_interprete.py`](puente_interprete.py) | Intercambia JSON por entrada/salida estándar para comunicar Python con Node; no guarda sesiones. |
 | [`flujo.js`](flujo.js) | Conecta intérprete y catálogo; ejecuta la consulta solo con un cliente PostgreSQL inyectado y una solicitud válida. |
 | [`respuesta.js`](respuesta.js) | Redacta resultados de las siete consultas con el período y los filtros aplicables; informa resultados vacíos sin convertirlos en ceros. |
+| [`trazabilidad.js`](trazabilidad.js) | Adaptador local que registra pregunta, aclaraciones, consulta autorizada, fuentes, validaciones, filas agregadas y respuesta en P2 mediante clientes inyectados. |
+| [`TRAZABILIDAD_P2.md`](TRAZABILIDAD_P2.md) | Contrato de clientes y sesiones, correspondencia de tablas y límites de la integración P2. |
 | [`Equipo01_DataMart_DML_P3_Incremental.sql`](Equipo01_DataMart_DML_P3_Incremental.sql) | Agrega datos de demostración P3 a una **base de pruebas previamente cargada con P1**, sin modificar sus cuatro ventas originales. No ejecutar junto al DML completo. |
 | [`tests/`](tests/) | Pruebas del reconocimiento, aclaraciones, validación, respuestas y ejecución simulada; `test_dql_semillas.py` compara consultas y carga incremental en SQLite. |
 
@@ -40,4 +42,4 @@ La conexión usa TLS con verificación de certificado y la prueba inicia una tra
 
 ## Estado y límites
 
-Las siete consultas fijas se ejecutaron en Supabase sobre los datos de demostración; los resultados esperados y las adaptaciones a P1 están en [`CAMBIOS_INTEGRACION_P3.md`](../Equipo01_DataMart_Parcial01/CAMBIOS_INTEGRACION_P3.md). La prueba integral requiere configurar acceso PostgreSQL localmente y todavía no se ha ejecutado con una conexión real; sigue pendiente conciliar cifras con fuentes de P1. No agregar credenciales ni `opencode.json` al repositorio.
+Las siete consultas fijas se ejecutaron en Supabase sobre los datos de demostración; los resultados esperados y las adaptaciones a P1 están en [`CAMBIOS_INTEGRACION_P3.md`](../Equipo01_DataMart_Parcial01/CAMBIOS_INTEGRACION_P3.md). La trazabilidad P2 solo tiene pruebas locales con dobles de base de datos. La prueba integral requiere configurar acceso PostgreSQL localmente y todavía no se ha ejecutado con una conexión real; sigue pendiente conciliar cifras con fuentes de P1. No agregar credenciales ni `opencode.json` al repositorio.

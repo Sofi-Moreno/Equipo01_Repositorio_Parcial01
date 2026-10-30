@@ -1,6 +1,6 @@
 # Cómo funciona el agente analítico
 
-Este documento explica el recorrido completo de una pregunta de negocio, desde que llega en lenguaje natural hasta que se entrega una respuesta respaldada por datos. Sirve como base para describir el agente en el informe del parcial. **El recorrido con P2 se presenta como diseño de integración**: hoy el prototipo interpreta, valida, consulta mediante un cliente inyectado y redacta respuestas, pero todavía no persiste la trazabilidad en P2. El estado verificable y las decisiones están en [Decisiones y estado de P3](DECISIONES_Y_ESTADO_P3.md).
+Este documento explica el recorrido completo de una pregunta de negocio, desde que llega en lenguaje natural hasta que se entrega una respuesta respaldada por datos. Sirve como base para describir el agente en el informe del parcial. El adaptador P2 registra las etapas con clientes inyectados y pruebas locales, pero todavía **no se ha validado contra una base P2 real**. El estado verificable y las decisiones están en [Decisiones y estado de P3](DECISIONES_Y_ESTADO_P3.md).
 
 ## El recorrido en una mirada
 
@@ -30,7 +30,7 @@ El agente no elige fechas ni filtros por su cuenta. Si falta el período, pregun
 
 Una respuesta como «octubre de 2025» se convierte en el rango `2025-10-01` a `2025-10-31`. «Últimos tres meses disponibles» es un período simbólico válido: la consulta a P1 determina los meses que tienen ventas. Si el usuario no aclara de forma inequívoca, el agente vuelve a preguntar y **no consulta** el Data Mart.
 
-[`flujo.js`](flujo.js) comunica cada turno de Node con el intérprete Python mediante [`puente_interprete.py`](puente_interprete.py). La solicitud actualizada se conserva entre turnos para poder continuar la conversación. En la integración completa, P2 asociaría estos turnos con la sesión y la pregunta original.
+[`flujo.js`](flujo.js) comunica cada turno de Node con el intérprete Python mediante [`puente_interprete.py`](puente_interprete.py). La solicitud actualizada se conserva entre turnos para poder continuar la conversación. El adaptador de P2 guarda las aclaraciones asociadas a la sesión y la pregunta original cuando se utiliza la interfaz trazada.
 
 ## 3. Autorizar una consulta, no inventarla
 
@@ -48,7 +48,7 @@ Según la pregunta, el agente puede presentar una serie mensual, un ranking, una
 
 **Ejemplo de recorrido:** el usuario pregunta «¿Cuál fue el ingreso neto por mes?»; el intérprete pide el período; el usuario aclara «octubre de 2025»; el catálogo valida la solicitud y selecciona la consulta mensual de ingreso neto; P1 devuelve las filas del mes; el agente responde con el rango consultado y el importe obtenido. El ejemplo explica el orden de operaciones: la cifra solo puede venir de P1, nunca de la pregunta ni de un ejemplo del intérprete.
 
-## 5. Conservar la trazabilidad en P2 (integración prevista)
+## 5. Conservar la trazabilidad en P2 (adaptador local)
 
 El [informe del parcial](../Equipo01_Informe_Parcial01.pdf) describe el modelo de objetos y el flujo de P2; el [DDL disponible](../Equipo01_DataMart_Parcial01/Equipo01_BDOO_DDL_Parcial01.sql) ofrece tablas para registrar sus etapas. En el recorrido completo, la sesión y la pregunta se vinculan con su intención; la consulta queda asociada a la plantilla SQL y sus parámetros; las validaciones y las fuentes identifican qué se comprobó y qué tablas y atributos se usaron; el resultado guarda las filas y metadatos; la respuesta final queda ligada al resultado.
 
@@ -59,10 +59,10 @@ usuarios → sesiones → preguntas → consultas_analiticas
                                          └→ resultados_consultas → respuestas_agente
 ```
 
-Este registro permitiría reconstruir **qué preguntó el usuario, qué se entendió, qué consulta se autorizó, con qué parámetros y fuentes, qué devolvió P1 y qué se respondió**. También permitiría distinguir una aclaración pendiente, una consulta rechazada y un resultado vacío de una respuesta respaldada por datos. La interfaz de persistencia y los puntos exactos donde guardar cada evento requieren acordar el contrato definitivo con P2; el prototipo actual todavía no escribe en estas tablas.
+El adaptador [`trazabilidad.js`](trazabilidad.js) registra estas etapas cuando P2 provee una sesión existente, sus intenciones y un cliente de escritura. Esto permitiría reconstruir **qué preguntó el usuario, qué se entendió, qué consulta se autorizó, con qué parámetros y fuentes, qué devolvió P1 y qué se respondió**. La correspondencia de columnas y los límites de este contrato provisional están en [Trazabilidad P2](TRAZABILIDAD_P2.md); falta probarlo contra la base real y acordar el contrato definitivo con P2.
 
 ## Para redactar el informe
 
-> El agente interpreta preguntas de ventas dentro de un conjunto controlado, solicita los datos faltantes y valida la solicitud antes de seleccionar una consulta SQL fija y parametrizada. El Data Mart de P1 proporciona los resultados; el agente los convierte en una respuesta comprensible sin completar valores inexistentes. El diseño de P2 permite conservar la pregunta, su intención, las validaciones y fuentes, la consulta, el resultado y la respuesta para auditar todo el recorrido. La persistencia de esa trazabilidad es una integración prevista, no una funcionalidad verificada del prototipo actual.
+> El agente interpreta preguntas de ventas dentro de un conjunto controlado, solicita los datos faltantes y valida la solicitud antes de seleccionar una consulta SQL fija y parametrizada. El Data Mart de P1 proporciona los resultados; el agente los convierte en una respuesta comprensible sin completar valores inexistentes. Un adaptador de P2 registra pregunta, intención, validaciones y fuentes, consulta, resultado y respuesta para auditar el recorrido. Esta integración cuenta con pruebas locales, pero sigue pendiente verificarla contra las tablas P2 reales.
 
 Los criterios de cálculo, las diferencias entre el diagrama de P2 y su DDL, y las pruebas pendientes se detallan en [Decisiones y estado de P3](DECISIONES_Y_ESTADO_P3.md).

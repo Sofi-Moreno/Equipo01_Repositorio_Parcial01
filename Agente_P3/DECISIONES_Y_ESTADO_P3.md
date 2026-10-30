@@ -23,14 +23,14 @@ Los nombres de columnas se toman del esquema P1; por ejemplo, `DimProducto.Nombr
 - La pregunta no se convierte directamente en SQL. [`interprete.py`](interprete.py) identifica la solicitud; [`catalogo.js`](catalogo.js) autoriza solo siete plantillas parametrizadas extraídas del [DQL de P1](../Equipo01_DataMart_Parcial01/Equipo01_DataMart_DQL_Parcial01.sql). La operación `generar_sql()` descrita por P2 se interpreta como selección de una plantilla, no generación libre.
 - [`flujo.js`](flujo.js) conecta Python y Node y admite un cliente PostgreSQL inyectado. [`respuesta.js`](respuesta.js) resume las filas devueltas y conserva período, filtros y datos estructurados. `interprete.json` contiene solicitudes esperadas, **no resultados consultados**.
 - La carga [incremental de P3](Equipo01_DataMart_DML_P3_Incremental.sql) incorpora datos de demostración sin sustituir los cuatro hechos originales de P1. El detalle de cambios al DQL y la semilla de pruebas está en [Cambios de integración P3](../Equipo01_DataMart_Parcial01/CAMBIOS_INTEGRACION_P3.md).
-- La persistencia debe enlazar pregunta → intención → SQL y parámetros → fuentes/validaciones → filas y metadatos → respuesta. P2 registra el proceso, no duplica la tabla de hechos del Data Mart.
+- El adaptador [`trazabilidad.js`](trazabilidad.js) enlaza pregunta → intención → SQL y parámetros → fuentes/validaciones → filas agregadas y metadatos → respuesta sobre el DDL actual de P2, con clientes inyectados y pruebas locales. P2 registra el proceso, no duplica la tabla de hechos del Data Mart. Ver [contrato de trazabilidad](TRAZABILIDAD_P2.md).
 
 ## Qué falta para afirmar que el recorrido está completo
 
 | Área | Estado / decisión pendiente |
 | --- | --- |
 | P1 y respuestas | Las siete plantillas se probaron sobre la semilla en Supabase; el intérprete y las respuestas tienen pruebas locales. Falta conciliar resultados con fuentes de P1 y añadir la advertencia SCD2 a la respuesta de caída. |
-| P2 | El DDL de P2 está en el repositorio, pero las tablas P2 no se han aplicado a Supabase y P3 no escribe en ellas. El informe muestra `Agente_Analitico` y `ca_validacion`, ausentes del DDL; además dibuja relaciones 1:1 no garantizadas por sus FK opcionales y sin `UNIQUE`. Confirmar con P2 qué versión es el contrato definitivo antes de implementar la persistencia. |
+| P2 | El DDL de P2 está en el repositorio; el adaptador local escribiría en esas tablas si existieran, pero no se han aplicado a Supabase ni se probó contra PostgreSQL P2 real. El informe muestra `Agente_Analitico` y `ca_validacion`, ausentes del DDL; además dibuja relaciones 1:1 no garantizadas por sus FK opcionales y sin `UNIQUE`. Confirmar con P2 qué versión es el contrato definitivo antes de tomar el adaptador como integración final. |
 | Prueba integral | No está validado el recorrido Node → PostgreSQL real: la conexión `pg` terminó en timeout antes de recibir respuesta a `SSLRequest`. Su diagnóstico está pausado por decisión del usuario; la prueba local con cliente simulado no lo sustituye. |
 | Alcance | Las variantes de «mejor canal» no están en las siete consultas autorizadas. Las tres preguntas adicionales se reservaron para P4. |
 
